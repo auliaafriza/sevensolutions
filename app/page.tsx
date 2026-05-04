@@ -1,11 +1,9 @@
 "use client";
 import { data } from "./dummy";
-import { useState } from "react";
-
-interface TypeSelect {
-  type: string;
-  name: string;
-}
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { groupBy } from "./utils";
+import { TypeSelect, User } from "./interface";
 
 export default function Home() {
   const [dataList, setDataList] = useState<TypeSelect[]>(data);
@@ -22,7 +20,6 @@ export default function Home() {
       setDataList(dataList.filter((item) => item.name !== items.name));
     }
   };
-  
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleRightClick = (e: React.MouseEvent) => {
@@ -56,6 +53,30 @@ export default function Home() {
 
     setIsFruitTurn((prev) => !prev);
   };
+
+  const [groupedUsers, setGroupedUsers] = useState<Record<string, User[]>>({});
+
+  // ✅ API call inside useEffect
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await axios.get<{ users: User[] }>(
+          "https://dummyjson.com/users",
+        );
+
+        const grouped = groupBy<User, string>(
+          res.data.users,
+          (user) => user.company?.department || "unknown",
+        );
+
+        setGroupedUsers(grouped);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <div
@@ -103,6 +124,25 @@ export default function Home() {
                 </button>
               ))
             : null}
+        </div>
+      </div>
+
+      {/*  SHOW GROUPED USERS */}
+      <div className="mt-10 w-full">
+        <h2 className="font-bold mb-4 text-black p-4">Users by Department</h2>
+        <div className="grid grid-cols-3 gap-4 p-4">
+          {Object.entries(groupedUsers).map(([dept, users]) => (
+            <div key={dept} className="mb-4">
+              <h3 className="font-semibold text-black">{dept}</h3>
+              <ul>
+                {users.slice(0, 3).map((u) => (
+                  <li key={u.id} className="text-black">
+                    {u.firstName} {u.lastName}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       </div>
     </div>
